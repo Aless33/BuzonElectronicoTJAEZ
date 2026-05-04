@@ -1,106 +1,84 @@
 
-# 🏛️ Buzón Electrónico TJAEZ
+# Buzón Electrónico TJAEZ
 
-Buzón Electrónico es un sistema web y API diseñado para el Tribunal de Justicia Administrativa del Estado de Zacatecas (TJAEZ). Su función es permitir a los ciudadanos y abogados realizar el pre-registro digital de sus promociones y depositarlas de manera física y automatizada fuera del horario tradicional de ventanilla.
+Buzón Electrónico es un sistema web diseñado para el Tribunal de Justicia Administrativa del Estado de Zacatecas (TJAEZ)[cite: 1]. Permite a ciudadanos y abogados realizar el pre-registro digital de promociones legales y depositarlas físicamente de manera automatizada fuera del horario tradicional[cite: 1].
 
-### 🧭 Objetivo General
+### Objetivo General
 
-Modernizar la recepción de documentos mediante la migración a un entorno basado en Python (Django). El sistema gestiona una interfaz web para el pre-registro y proporciona una API robusta para la comunicación bidireccional con el hardware del buzón físico.
+Modernizar la recepción de documentos migrando a una arquitectura en Python (Django)[cite: 1]. El sistema gestiona una interfaz web para el pre-registro y expone una API RESTful para la validación y confirmación ciber-física con el hardware del buzón[cite: 1].
 
-### 🧩 Arquitectura del Sistema
+### Arquitectura del Sistema
 
-El sistema opera bajo una arquitectura cliente-servidor dividida en módulos. Contempla una plataforma web accesible para la generación de códigos QR (pre-registro) y una API RESTful que permite la integración ciber-física para la lectura, apertura y confirmación de recepción mediante sensores.
+El sistema implementa una arquitectura cliente-servidor estructurada en:
+*   **Módulo Web:** Gestión de formularios dinámicos y renderizado de etiquetas PDF con códigos QR[cite: 1].
+*   **API REST:** Endpoints para la validación óptica y confirmación de depósito mediante sensores físicos[cite: 1].
+*   **Tareas Asíncronas:** Procesamiento en segundo plano para el envío de acuses provisionales por correo electrónico[cite: 1].
 
-### 🏗️ Estructura del Proyecto
+### Estructura del Proyecto
 
 ```text
 buzon_electronico_tjaez/
 │
-├───api/
-│   ├───views.py          # Endpoints de validación y confirmación
-│   ├───serializers.py    # Transformación de datos JSON
-│   └───urls.py           # Rutas de la API RESTful
-│
-├───core/
-│   ├───models.py         # Modelos de BD (Promocion, Etiqueta)
-│   ├───admin.py          # Panel de monitor de TI
-│   └───tasks.py          # Tareas asíncronas (Celery/CRON)
-│
-├───web/
-│   ├───forms.py          # Lógica de formularios dinámicos
-│   ├───views.py          # Renderizado de portal ciudadano
-│   └───templates/        # Interfaz de usuario responsiva
-│
-└───utils/
-    └───pdf_generator.py  # Motor de renderizado de QR y Acuses
+├───api/                  # Endpoints de comunicación con el hardware
+├───web/                  # Vistas, formularios y templates del ciudadano
+├───core/                 # Modelos de base de datos y tareas asíncronas
+├───utils/                # Motor de renderizado PDF (ReportLab)
+├───Dockerfile            # Configuración de la imagen de la aplicación
+├───docker-compose.yml    # Orquestación de servicios
+└───requirements.txt      # Dependencias
 ```
 
-### ⚙️ Tecnologías y Frameworks
+### Tecnologías y Frameworks
 
 | Componente | Tecnología / Framework | Descripción |
 | :--- | :--- | :--- |
-| **Lenguaje principal** | Python 3.10+ | Lenguaje backend utilizado para la lógica del sistema. |
-| **Framework Web** | Django 4.x+ | Provee el entorno de desarrollo, ORM y panel de administración. |
-| **API** | Django REST Framework | Creación de los endpoints para comunicación con el hardware. |
-| **Seguridad** | JWT y TLS 1.2+ | Autenticación del hardware por tokens y cifrado de extremo a extremo. |
-| **Base de datos** | PostgreSQL 15 | Persistencia relacional para el control de estados y metadatos. |
-| **Tareas Asíncronas**| Celery + Redis | Ejecución de envíos de correo e invalidación nocturna de QRs. |
-| **Contenedores** | Docker & Compose | Orquestación y aislamiento del entorno de desarrollo y producción. |
+| **Lenguaje principal** | Python 3.10+ | Lenguaje backend utilizado[cite: 1]. |
+| **Framework Web** | Django 4.x+ | Entorno de desarrollo principal y ORM[cite: 1]. |
+| **API** | Django REST Framework | Exposición de endpoints para el hardware[cite: 1]. |
+| **Base de datos** | PostgreSQL 15 | Persistencia de datos relacional. |
+| **Cola de mensajes** | Redis 7 | Broker en memoria para la gestión de tareas. |
+| **Tareas Asíncronas** | Celery 5.3+ | Ejecución asíncrona de correos y caducidades[cite: 1]. |
+| **Infraestructura** | Docker & Compose | Contenedorización del entorno de desarrollo. |
 
-### 🧱 Estructura de los Módulos
+### Dependencias Clave
 
-🔹 **Módulo Web (Frontend)**
-Encargado de la interacción directa con el ciudadano:
-*   **Formulario Condicional:** Adapta campos según el tipo de promoción, ocultando "Número de expediente" si es un trámite inicial.
-*   **Generador de Identificadores:** Crea un UUID versión 4 y un dígito verificador corto por cada sobre.
-*   **Renderizado de Documentos:** Genera el PDF con las etiquetas QR y acuses provisionales.
+```text
+Django>=4.2.0
+djangorestframework>=3.14.0
+psycopg2-binary>=2.9.9
+celery>=5.3.0
+redis>=5.0.1
+reportlab>=4.0.0
+qrcode>=7.4.2
+```
 
-🔹 **Módulo API REST (Backend Hardware)**
-Gestión de la comunicación con los sensores físicos:
-*   **Endpoint de Validación (`GET`):** Recibe el UUID leído por el escáner, valida su vigencia (antes de las 23:59 hrs) y autoriza la apertura.
-*   **Endpoint de Confirmación (`POST`):** Recibe la señal del sensor físico indicando la caída del sobre y cambia el estado a `DEPOSITADO`.
-
-🔹 **Módulo de Notificaciones y Tareas Programadas**
-*   **Disparo de Acuse:** Envío asíncrono de correo electrónico mediante Celery tras confirmar el depósito.
-*   **Invalidación Nocturna:** Tarea programada (Celery Beat) a las 00:01 hrs para cambiar a `NO_PRESENTADO` los registros no depositados.
-
-### ▶️ Ejecución del Proyecto (Docker)
+### Ejecución del Proyecto
 
 **1. Requisitos previos**
-*   Docker Desktop o Docker Engine instalado.
-*   Docker Compose V2 instalado.
-*   Servidor host con reloj sincronizado mediante NTP (CENAM) para la precisión legal de los registros.
+*   Docker y Docker Compose instalados.
+*   Servidor con reloj sincronizado mediante NTP (CENAM).
 
 **2. Clonar el repositorio**
 ```bash
-git clone 
+git clone <URL_DEL_REPOSITORIO>
 cd buzon_electronico_tjaez
 ```
 
-**3. Inicializar el proyecto Django (Primera ejecución)**
-Si el proyecto Django no ha sido inicializado en el directorio actual, ejecutar:
+**3. Ejecutar los contenedores**
 ```bash
-docker-compose run web django-admin startproject buzon_electronico_tjaez .
+docker-compose up -d --build
 ```
 
-**4. Levantar los contenedores**
-Este comando compilará la imagen de Python, descargará las imágenes de PostgreSQL y Redis, e iniciará Django, Celery Worker y Celery Beat.
+**4. Aplicar migraciones de base de datos**
 ```bash
-docker-compose up --build
-```
-
-**5. Ejecutar migraciones de base de datos**
-En una nueva terminal, aplicar las migraciones a la base de datos PostgreSQL:
-```bash
-docker-compose exec web python manage.py makemigrations
 docker-compose exec web python manage.py migrate
 ```
 
-**6. Acceso al sistema**
-*   Portal Web y API: `http://localhost:8000/`
-*   Panel de Administración: `http://localhost:8000/admin/`
+**5. Crear superusuario (opcional para acceso al admin)**
+```bash
+docker-compose exec web python manage.py createsuperuser
+```
 
-### 🏆 Créditos
+### Créditos
 
-Autor: Alessandro Villela Espino.
-```</URL_DEL_REPOSITORIO>
+Autor: Alessandro Villela Espino
