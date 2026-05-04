@@ -60,7 +60,7 @@ qrcode>=7.4.2
 
 **2. Clonar el repositorio**
 ```bash
-git clone <URL_DEL_REPOSITORIO>
+git clone https://github.com/Aless33/BuzonElectronicoTJAEZ.git
 cd buzon_electronico_tjaez
 ```
 
