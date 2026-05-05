@@ -23,6 +23,8 @@ buzon_electronico_tjaez/
 ├───web/                  # Vistas, formularios y templates del ciudadano
 ├───core/                 # Modelos de base de datos y tareas asíncronas
 ├───utils/                # Motor de renderizado PDF (ReportLab)
+├───pruebas_unitarias/    # Pruebas mediante unittest
+├───pruebas_aceptacion/   # Pruebas mediante behave
 ├───Dockerfile            # Configuración de la imagen de la aplicación
 ├───docker-compose.yml    # Orquestación de servicios
 └───requirements.txt      # Dependencias
