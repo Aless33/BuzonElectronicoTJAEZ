@@ -16,3 +16,15 @@ Cuando la cantidad de sobres físicos declarados es 0 o nula
 Entonces el sistema interrumpe el proceso
 Y se realiza un rollback en la base de datos
 Y el sistema retorna un mensaje de error indicando que la cantidad de sobres es requerida
+
+Escenario: Fallo por tipo de promoción ausente
+Dado que el sistema recibe una petición para generar códigos QR
+Cuando el tipo de promoción no es proporcionado
+Entonces el sistema interrumpe el proceso
+Y el sistema retorna un error indicando que el tipo de promoción es obligatorio
+
+Escenario: Fallo por cantidad de sobres no válida
+Dado que el sistema recibe una petición para generar códigos QR
+Cuando la cantidad de sobres físicos es un tipo de dato incorrecto
+Entonces el sistema interrumpe el proceso
+Y el sistema retorna un error indicando que el número de sobres debe ser al menos 1

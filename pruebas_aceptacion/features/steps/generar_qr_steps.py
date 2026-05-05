@@ -78,3 +78,31 @@ def step_impl(context):
 def step_impl(context):
     error_recibido = getattr(context, 'mensaje_error', '')
     assert error_recibido == "la cantidad de sobres es requerida", f"El mensaje de error esperado no coincide. Se recibió: {error_recibido}"
+
+@when('el tipo de promoción no es proporcionado')
+def step_impl(context):
+    context.datos = {"numero_sobres": 1}
+    try:
+        from web.services import generar_qr_provisional
+        generar_qr_provisional(context.datos)
+    except ValueError as e:
+        context.error_generado = str(e)
+        context.proceso_interrumpido = True
+
+@then('el sistema retorna un error indicando que el tipo de promoción es obligatorio')
+def step_impl(context):
+    assert getattr(context, 'error_generado', '') == "El tipo de promoción es obligatorio."
+
+@when('la cantidad de sobres físicos es un tipo de dato incorrecto')
+def step_impl(context):
+    context.datos = {"tipo_promocion": "DEMANDA", "numero_sobres": "dos"}
+    try:
+        from web.services import generar_qr_provisional
+        generar_qr_provisional(context.datos)
+    except ValueError as e:
+        context.error_generado = str(e)
+        context.proceso_interrumpido = True
+
+@then('el sistema retorna un error indicando que el número de sobres debe ser al menos 1')
+def step_impl(context):
+    assert getattr(context, 'error_generado', '') == "El número de sobres debe ser al menos 1."
