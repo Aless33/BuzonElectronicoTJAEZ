@@ -1,0 +1,17 @@
+{% if campos_extra %}
+<div class="fields-divider"><span>Datos del Expediente</span></div>
+{% endif %}
+
+{% for name, field in campos_extra %}
+<div class="form-group">
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+    {% if field.errors %}
+    <ul class="errorlist">
+        {% for e in field.errors %}<li>{{ e }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+</div>
+{% empty %}
+{# Demanda / RAG Inicial — sin campos extra #}
+{% endfor %}

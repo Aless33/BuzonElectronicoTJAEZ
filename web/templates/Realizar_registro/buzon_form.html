@@ -1,0 +1,201 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buzón Electrónico — TJAEZ</title>
+    <link rel="stylesheet" href="{% static 'css/buzon_form.css' %}">
+</head>
+
+<body>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-brand">
+            <div class="logo">T</div>
+            <div class="brand-text">Tribunal de Justicia<br>Administrativa del Estado<br>de Zacatecas</div>
+        </div>
+        <div class="header-title">Buzón Electrónico</div>
+    </header>
+
+    <div class="page-body">
+
+        <a href="#" class="btn-regresar">← Regresar</a>
+
+        {% if messages %}
+        <ul class="messages">
+            {% for msg in messages %}
+            <li class="{{ msg.tags }}">{{ msg }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+
+        <p class="intro-text">
+            Complete el formulario para registrar una nueva promoción en el buzón electrónico.
+        </p>
+
+        <div class="form-card">
+            <h2>Nueva Promoción</h2>
+
+            <form method="post" id="buzon-form">
+                {% csrf_token %}
+
+                <!-- Tipo de Promoción -->
+                <div class="form-group">
+                    <label for="{{ form.tipo_promocion.id_for_label }}">
+                        {{ form.tipo_promocion.label }}
+                    </label>
+                    {{ form.tipo_promocion }}
+                    {% if form.tipo_promocion.errors %}
+                    <ul class="errorlist">
+                        {% for e in form.tipo_promocion.errors %}<li>{{ e }}</li>{% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+
+                <!-- Correo -->
+                <div class="form-group">
+                    <label for="{{ form.correo_electronico.id_for_label }}">
+                        {{ form.correo_electronico.label }}
+                    </label>
+                    {{ form.correo_electronico }}
+                    {% if form.correo_electronico.errors %}
+                    <ul class="errorlist">
+                        {% for e in form.correo_electronico.errors %}<li>{{ e }}</li>{% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+
+                <!-- Confirmar Correo (nuevo) -->
+                <div class="form-group">
+                    <label for="{{ form.correo_electronico_confirmacion.id_for_label }}">
+                        {{ form.correo_electronico_confirmacion.label }}
+                    </label>
+                    {{ form.correo_electronico_confirmacion }}
+                    {% if form.correo_electronico_confirmacion.errors %}
+                    <ul class="errorlist">
+                        {% for e in form.correo_electronico_confirmacion.errors %}<li>{{ e }}</li>{% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+
+                <!-- Número de Sobres -->
+                <div class="form-group">
+                    <label for="{{ form.numero_sobres.id_for_label }}">
+                        {{ form.numero_sobres.label }}
+                    </label>
+                    {{ form.numero_sobres }}
+                    {% if form.numero_sobres.errors %}
+                    <ul class="errorlist">
+                        {% for e in form.numero_sobres.errors %}<li>{{ e }}</li>{% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+
+                <!-- Campos extra dinámicos -->
+                <div id="campos-extra">
+                    {% include "Realizar_registro/campos_extra.html" %}
+                </div>
+                <div class="campos-loading" id="campos-loading">Cargando campos…</div>
+
+                <button type="submit" class="btn-generar">Generar Etiquetas</button>
+            </form>
+            <div class="envelope-section">
+                <p class="envelope-note">NOTA: Las medidas máximas de los sobres serán:</p>
+                <div class="envelope-wrap">
+                    <svg width="320" height="360" viewBox="0 0 320 360" xmlns="http://www.w3.org/2000/svg">
+                        <text x="0" y="155" class="dim-label" font-size="14" font-family="Segoe UI,Arial"
+                            font-weight="600">Alto</text>
+                        <text x="0" y="172" class="dim-label" font-size="14" font-family="Segoe UI,Arial"
+                            font-weight="600">37 cms</text>
+                        <line x1="72" y1="30" x2="72" y2="300" stroke="#333" stroke-width="1.5" />
+                        <line x1="68" y1="30" x2="76" y2="30" stroke="#333" stroke-width="1.5" />
+                        <line x1="68" y1="300" x2="76" y2="300" stroke="#333" stroke-width="1.5" />
+                        <rect x="80" y="30" width="180" height="270" rx="3" fill="#c9a84c" />
+                        <polygon points="80,30 260,30 170,100" fill="#b8960c" />
+                        <text x="272" y="155" font-size="14" font-family="Segoe UI,Arial" font-weight="600"
+                            fill="#333">Ancho</text>
+                        <text x="272" y="172" font-size="14" font-family="Segoe UI,Arial" font-weight="600"
+                            fill="#333">9 cms</text>
+                        <line x1="80" y1="310" x2="260" y2="310" stroke="#333" stroke-width="1.5" />
+                        <line x1="80" y1="306" x2="80" y2="314" stroke="#333" stroke-width="1.5" />
+                        <line x1="260" y1="306" x2="260" y2="314" stroke="#333" stroke-width="1.5" />
+                        <text x="130" y="330" font-size="14" font-family="Segoe UI,Arial" font-weight="600"
+                            fill="#333">Largo</text>
+                        <text x="130" y="348" font-size="14" font-family="Segoe UI,Arial" font-weight="600"
+                            fill="#333">29 cms</text>
+                    </svg>
+                </div>
+                <p class="footer-note">
+                    Nota: Si no tiene una regla a la mano para medir el sobre, de
+                    <a href="#">clic aquí</a> para ver algunos ejemplos de medida.
+                </p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Cambair esto al static/js/buzon_form.js proximamente -->
+    <script>
+        const selectTipo = document.getElementById('id_tipo_promocion');
+        const contenedor = document.getElementById('campos-extra');
+        const spinner = document.getElementById('campos-loading');
+
+        // Aplica clase CSS a todos los inputs/selects del form
+        function aplicarClases(raiz) {
+            raiz.querySelectorAll('input, select, textarea').forEach(el => {
+                el.classList.add('form-input');
+            });
+        }
+
+        // Aplica al cargar la página (campos base)
+        aplicarClases(document);
+
+        async function cargarCamposExtra(tipo) {
+            spinner.classList.add('visible');
+            contenedor.innerHTML = '';
+
+            const url = "{% url 'buzon_form_parcial' %}?tipo=" + encodeURIComponent(tipo);
+            const resp = await fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+
+            spinner.classList.remove('visible');
+
+            if (resp.ok) {
+                contenedor.innerHTML = await resp.text();
+                aplicarClases(contenedor);
+            }
+        }
+
+        // Validación en tiempo real de confirmación de correo
+        const inputCorreo = document.querySelector('[name="correo_electronico"]');
+        const inputConfirmar = document.querySelector('[name="correo_electronico_confirmacion"]');
+
+        function validarCorreos() {
+            if (!inputCorreo || !inputConfirmar) return;
+            if (inputConfirmar.value === '') return;
+
+            if (inputCorreo.value !== inputConfirmar.value) {
+                inputConfirmar.setCustomValidity('Los correos no coinciden.');
+                inputConfirmar.style.borderColor = '#c0392b';
+            } else {
+                inputConfirmar.setCustomValidity('');
+                inputConfirmar.style.borderColor = '#b8960c';
+            }
+        }
+
+        document.addEventListener('input', e => {
+            if (e.target === inputCorreo || e.target === inputConfirmar) {
+                validarCorreos();
+            }
+        });
+
+        selectTipo.addEventListener('change', e => cargarCamposExtra(e.target.value));
+    </script>
+
+</body>
+
+</html>
