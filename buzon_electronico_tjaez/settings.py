@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'web', 
+    'behave_django',
 ]
 
 MIDDLEWARE = [
@@ -78,7 +80,7 @@ DATABASES = {
         'NAME': 'buzon_db',
         'USER': 'buzon_user',
         'PASSWORD': 'buzon_password',
-        'HOST': 'db',
+        'HOST': 'localhost',
         'PORT': '5432',
     }
 }
