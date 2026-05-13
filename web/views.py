@@ -1,29 +1,65 @@
 from django.shortcuts import render, redirect
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST, require_GET
+from django.http import HttpResponse, JsonResponse
+from django.views.decorators.http import require_GET
 from django.contrib import messages
 from .forms import FORM_MAP, BuzonDemandaForm
-from .models import TipoPromocion
+from .models import TipoPromocion, Promocion, Etiqueta
+from .services.pdf_service import generar_pdf_etiquetas
+from django.utils import timezone
+from datetime import time
 
 
 def buzon_crear(request):
-    """
-    Vista principal,
-    GET muestra el form inicial, 
-    POST guarda el registro.
-
-    """
     tipo = request.POST.get('tipo_promocion') or request.GET.get('tipo_promocion', TipoPromocion.DEMANDA)
     FormClass = FORM_MAP.get(tipo, BuzonDemandaForm)
 
     if request.method == 'POST':
         form = FormClass(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Buzón registrado correctamente.')
+            # 1. Guardar la promoción en BD
+            promocion = form.save()
 
-            #Aqui redirige al PDF con las etiquetas generadas PUSSYS 
-            return redirect('buzon_crear')
+            # 2. Armar el dict que espera el servicio PDF
+            datos = {
+                "tipo_promocion":    promocion.tipo_promocion,
+                "numero_expediente": getattr(promocion, 'numero_expediente', None),
+                "anio":              getattr(promocion, 'anio', None),
+                "ponencia":          getattr(promocion, 'ponencia', None),
+                "correo_ciudadano":  promocion.correo_electronico,
+                "numero_sobres":     promocion.numero_sobres,
+            }
+
+            try:
+                pdf_bytes, etiquetas_meta = generar_pdf_etiquetas(datos)
+            except ValueError as e:
+                messages.error(request, str(e))
+                return render(request, 'Realizar_registro/buzon_form.html', {
+                    'form': form,
+                    'tipo_actual': tipo,
+                    'tipos': TipoPromocion.choices,
+                })
+
+            # 3. Persistir las etiquetas en BD
+            hoy = timezone.localdate()
+            caducidad = timezone.make_aware(
+                timezone.datetime.combine(hoy, time(23, 59, 59))
+            )
+            for meta in etiquetas_meta:
+                Etiqueta.objects.create(
+                    promocion=promocion,
+                    uuid=meta["uuid"],
+                    digito_verificador=meta["digito_verificador"],
+                    fecha_caducidad=caducidad,
+                    numero_sobre=meta["numero_sobre"],
+                )
+
+            # 4. Devolver el PDF directamente al navegador
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            response['Content-Disposition'] = (
+                f'inline; filename="etiquetas_promocion_{promocion.pk}.pdf"'
+            )
+            return response
+
     else:
         form = FormClass(initial={'tipo_promocion': tipo})
 
