@@ -21,3 +21,4 @@ admin.site.register(BuzonIncidente)
 admin.site.register(BuzonAmparo)
 admin.site.register(BuzonExpedienteRAG)
 admin.site.register(BuzonOtros)
+

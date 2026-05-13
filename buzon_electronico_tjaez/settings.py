@@ -37,7 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'web'
+    'web',
+    'behave_django',
 ]
 
 MIDDLEWARE = [
@@ -79,6 +80,7 @@ DATABASES = {
         'NAME': 'buzon_db',
         'USER': 'buzon_user',
         'PASSWORD': 'buzon_password',
+        'HOST': 'db',
         'HOST': 'db',
         'PORT': '5432',
     }
@@ -128,8 +130,8 @@ STATICFILES_DIRS = [
     BASE_DIR / 'web' / 'static',
 ]
 
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
