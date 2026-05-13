@@ -6,3 +6,7 @@ redis>=5.0.1
 reportlab>=4.0.0
 qrcode>=7.4.2
 behave>=1.2.6
+coverage>=7.3.0
+django-coverage-plugin>=1.1.1
+pytest>=7.4.0
+pytest-django>=4.8.0
