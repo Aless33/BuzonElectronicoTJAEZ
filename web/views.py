@@ -5,6 +5,9 @@ from django.contrib import messages
 from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from datetime import time
+'''
+Nueva version despues del merge
+'''
 
 from .forms import FORM_MAP, BuzonDemandaForm
 from .models import TipoPromocion, Etiqueta
