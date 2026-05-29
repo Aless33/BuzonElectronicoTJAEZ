@@ -1,4 +1,3 @@
-# admin.py
 from django.contrib import admin
 from .models import (
     BuzonDemanda,
@@ -10,6 +9,7 @@ from .models import (
     BuzonAmparo,
     BuzonExpedienteRAG,
     BuzonOtros,
+    Etiqueta,
 )
 
 admin.site.register(BuzonDemanda)
@@ -22,3 +22,8 @@ admin.site.register(BuzonAmparo)
 admin.site.register(BuzonExpedienteRAG)
 admin.site.register(BuzonOtros)
 
+@admin.register(Etiqueta)
+class EtiquetaAdmin(admin.ModelAdmin):
+    list_display  = ['uuid', 'digito_verificador', 'estado', 'numero_sobre', 'fecha_caducidad']
+    list_filter   = ['estado']
+    search_fields = ['uuid', 'digito_verificador']
