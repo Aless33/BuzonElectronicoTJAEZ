@@ -175,3 +175,64 @@ class BuzonOtros(ExpedienteMixin, BuzonBase):
     class Meta:
         verbose_name        = 'Buzón - Otros'
         verbose_name_plural = 'Buzones - Otros'
+
+
+"""
+Modelos del Buzón Electrónico TJAEZ.
+
+Define Promocion (registro padre) y Etiqueta (registro hijo por sobre),
+siguiendo las reglas de negocio del SRS: UUID v4 único por sobre,
+caducidad a las 23:59 hrs del día de emisión y estados controlados.
+"""
+
+# Al final de tu models.py existente, reemplaza el bloque de Promocion+Etiqueta por esto:
+
+import uuid
+import random
+import string
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
+
+
+def _generar_digito_verificador():
+    caracteres = string.ascii_uppercase + string.digits
+    return "".join(random.choices(caracteres, k=6))
+
+
+class Etiqueta(models.Model):
+    ESTADO_ETIQUETA_GENERADA = "ETIQUETA_GENERADA"
+    ESTADO_DEPOSITADO        = "DEPOSITADO"
+    ESTADO_NO_PRESENTADO     = "NO_PRESENTADO"
+    ESTADO_CANCELADO         = "CANCELADO"
+
+    ESTADO_CHOICES = [
+        (ESTADO_ETIQUETA_GENERADA, "Etiqueta Generada"),
+        (ESTADO_DEPOSITADO,        "Depositado"),
+        (ESTADO_NO_PRESENTADO,     "No Presentado"),
+        (ESTADO_CANCELADO,         "Cancelado"),
+    ]
+
+    # Relación genérica: apunta a cualquier BuzonXxx
+    content_type   = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id      = models.PositiveIntegerField()
+    buzon          = GenericForeignKey('content_type', 'object_id')
+
+    uuid               = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    digito_verificador = models.CharField(max_length=6, default=_generar_digito_verificador)
+    estado             = models.CharField(max_length=20, choices=ESTADO_CHOICES,
+                                          default=ESTADO_ETIQUETA_GENERADA)
+    fecha_caducidad    = models.DateTimeField()
+    numero_sobre       = models.PositiveIntegerField()
+    fecha_deposito     = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        verbose_name        = "Etiqueta"
+        verbose_name_plural = "Etiquetas"
+        ordering            = ["numero_sobre"]
+
+    def __str__(self):
+        return f"Etiqueta {self.digito_verificador} - Sobre {self.numero_sobre} [{self.estado}]"
+
+    @property
+    def esta_vigente(self):
+        return timezone.now() <= self.fecha_caducidad
