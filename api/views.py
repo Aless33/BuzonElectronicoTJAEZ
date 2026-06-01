@@ -131,7 +131,7 @@ class ConfirmarDepositoView(APIView):
         if etiqueta.estado != Etiqueta.ESTADO_ETIQUETA_GENERADA:
             return Response(
                 {
-                    "error": "La etiqueta no está en un estado válido para depositar.",
+                    "error": "La etiqueta no está en un estado válido.",
                     "estado_actual": etiqueta.estado,
                 },
                 status=status.HTTP_400_BAD_REQUEST
