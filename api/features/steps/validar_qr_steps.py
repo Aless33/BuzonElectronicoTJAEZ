@@ -6,23 +6,20 @@ import json
 from datetime import timedelta
 
 from behave import given, when, then
+from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
-from django.test import Client
 from django.utils import timezone
+from rest_framework.test import APIClient
 
 from web.models import BuzonDemanda, Etiqueta
 
 
-def _crear_buzon():
-    return BuzonDemanda.objects.create(
+def _crear_etiqueta(estado=Etiqueta.ESTADO_ETIQUETA_GENERADA, vigente=True):
+    buzon = BuzonDemanda.objects.create(
         tipo_promocion='DEMANDA',
         correo_electronico='test@test.com',
         numero_sobres=1,
     )
-
-
-def _crear_etiqueta(estado=Etiqueta.ESTADO_ETIQUETA_GENERADA, vigente=True):
-    buzon = _crear_buzon()
     ct = ContentType.objects.get_for_model(buzon)
     delta = timedelta(hours=1) if vigente else timedelta(hours=-1)
     return Etiqueta.objects.create(
@@ -34,32 +31,42 @@ def _crear_etiqueta(estado=Etiqueta.ESTADO_ETIQUETA_GENERADA, vigente=True):
     )
 
 
+def _cliente_autenticado():
+    user = User.objects.create_user(
+        username='hardware_test',
+        password='testpass123'
+    )
+    client = APIClient()
+    client.force_authenticate(user=user)
+    return client
+
+
 # ─── GIVEN ────────────────────────────────────────────────────────────────────
 
 @given('que el hardware escanea el código "{codigo}"')
 def step_escanea_codigo(context, codigo):
-    context.client = Client()
+    context.client = _cliente_autenticado()
     context.uuid_str = codigo
     context.etiqueta = None
 
 
 @given('que existe una etiqueta con estado "{estado}"')
 def step_etiqueta_con_estado(context, estado):
-    context.client = Client()
+    context.client = _cliente_autenticado()
     context.etiqueta = _crear_etiqueta(estado=estado)
     context.uuid_str = str(context.etiqueta.uuid)
 
 
 @given('que existe una etiqueta vigente que ha caducado')
 def step_etiqueta_caducada(context):
-    context.client = Client()
+    context.client = _cliente_autenticado()
     context.etiqueta = _crear_etiqueta(vigente=False)
     context.uuid_str = str(context.etiqueta.uuid)
 
 
 @given('que existe una etiqueta válida y vigente')
 def step_etiqueta_valida(context):
-    context.client = Client()
+    context.client = _cliente_autenticado()
     context.etiqueta = _crear_etiqueta()
     context.uuid_str = str(context.etiqueta.uuid)
 
@@ -71,7 +78,7 @@ def step_consulta_validez(context):
     context.response = context.client.get(
         f'/api/validar-qr/{context.uuid_str}/'
     )
-    context.response_json = json.loads(context.response.content)
+    context.response_json = context.response.json()
 
 
 @when('el hardware consulta la validez de esa etiqueta')
@@ -79,7 +86,7 @@ def step_consulta_etiqueta(context):
     context.response = context.client.get(
         f'/api/validar-qr/{context.uuid_str}/'
     )
-    context.response_json = json.loads(context.response.content)
+    context.response_json = context.response.json()
 
 
 @when('el hardware envía un POST a validar QR')

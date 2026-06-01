@@ -4,7 +4,7 @@ PEP8 compliant.
 """
 import os
 import django
-from django.test.utils import setup_test_environment
+from django.test.utils import setup_test_environment, teardown_test_environment
 from django.test.runner import DiscoverRunner
 
 os.environ.setdefault(
@@ -15,7 +15,10 @@ os.environ.setdefault(
 
 def before_all(context):
     django.setup()
-    setup_test_environment()
+    try:
+        setup_test_environment()
+    except RuntimeError:
+        pass
 
 
 def before_scenario(context, scenario):

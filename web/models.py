@@ -185,7 +185,6 @@ siguiendo las reglas de negocio del SRS: UUID v4 único por sobre,
 caducidad a las 23:59 hrs del día de emisión y estados controlados.
 """
 
-# Al final de tu models.py existente, reemplaza el bloque de Promocion+Etiqueta por esto:
 
 import uuid
 import random

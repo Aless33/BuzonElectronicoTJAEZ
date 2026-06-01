@@ -6,9 +6,10 @@ import json
 from datetime import timedelta
 
 from behave import given, when, then
+from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
-from django.test import Client
 from django.utils import timezone
+from rest_framework.test import APIClient
 
 from web.models import BuzonDemanda, Etiqueta
 
@@ -30,11 +31,21 @@ def _crear_etiqueta(estado=Etiqueta.ESTADO_ETIQUETA_GENERADA, vigente=True):
     )
 
 
-def _post_deposito(client, uuid_str, body):
+def _cliente_autenticado():
+    user = User.objects.create_user(
+        username='hardware_test',
+        password='testpass123'
+    )
+    client = APIClient()
+    client.force_authenticate(user=user)
+    return client
+
+
+def _post(client, uid, body):
     return client.post(
-        f'/api/confirmar-deposito/{uuid_str}/',
-        data=json.dumps(body),
-        content_type='application/json',
+        f'/api/confirmar-deposito/{uid}/',
+        data=body,
+        format='json',
     )
 
 
@@ -42,28 +53,28 @@ def _post_deposito(client, uuid_str, body):
 
 @given('que el sensor detecta el depósito del sobre con UUID "{uuid_str}"')
 def step_sensor_uuid(context, uuid_str):
-    context.client = Client()
+    context.client = _cliente_autenticado()
     context.uuid_str = uuid_str
     context.etiqueta = None
 
 
 @given('que existe una etiqueta válida y vigente para depósito')
 def step_etiqueta_valida_deposito(context):
-    context.client = Client()
+    context.client = _cliente_autenticado()
     context.etiqueta = _crear_etiqueta()
     context.uuid_str = str(context.etiqueta.uuid)
 
 
 @given('que existe una etiqueta con estado "{estado}" para depósito')
 def step_etiqueta_estado_deposito(context, estado):
-    context.client = Client()
+    context.client = _cliente_autenticado()
     context.etiqueta = _crear_etiqueta(estado=estado)
     context.uuid_str = str(context.etiqueta.uuid)
 
 
 @given('que existe una etiqueta caducada para depósito')
 def step_etiqueta_caducada_deposito(context):
-    context.client = Client()
+    context.client = _cliente_autenticado()
     context.etiqueta = _crear_etiqueta(vigente=False)
     context.uuid_str = str(context.etiqueta.uuid)
 
@@ -72,22 +83,22 @@ def step_etiqueta_caducada_deposito(context):
 
 @when('el hardware confirma el depósito con sensor en true')
 def step_confirma_sensor_true(context):
-    context.response = _post_deposito(
+    context.response = _post(
         context.client,
         context.uuid_str,
         {'sensor_confirmado': True},
     )
-    context.response_json = json.loads(context.response.content)
+    context.response_json = context.response.json()
 
 
 @when('el hardware confirma el depósito con sensor en true para esa etiqueta')
 def step_confirma_sensor_true_etiqueta(context):
-    context.response = _post_deposito(
+    context.response = _post(
         context.client,
         context.uuid_str,
         {'sensor_confirmado': True},
     )
-    context.response_json = json.loads(context.response.content)
+    context.response_json = context.response.json()
 
 
 @when('el hardware envía un cuerpo JSON inválido')
@@ -97,23 +108,23 @@ def step_json_invalido(context):
         data='esto no es json',
         content_type='application/json',
     )
-    context.response_json = json.loads(context.response.content)
+    context.response_json = context.response.json()
 
 
 @when('el hardware confirma el depósito sin el campo sensor')
 def step_sin_campo_sensor(context):
-    context.response = _post_deposito(context.client, context.uuid_str, {})
-    context.response_json = json.loads(context.response.content)
+    context.response = _post(context.client, context.uuid_str, {})
+    context.response_json = context.response.json()
 
 
 @when('el hardware confirma el depósito con sensor en false')
 def step_sensor_false(context):
-    context.response = _post_deposito(
+    context.response = _post(
         context.client,
         context.uuid_str,
         {'sensor_confirmado': False},
     )
-    context.response_json = json.loads(context.response.content)
+    context.response_json = context.response.json()
 
 
 @when('el hardware envía un GET a confirmar depósito')
