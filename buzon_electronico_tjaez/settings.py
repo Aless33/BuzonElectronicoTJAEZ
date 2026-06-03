@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
+import os
 
 from pathlib import Path
 
@@ -111,6 +112,10 @@ DATABASES = {
 CELERY_BROKER_URL = 'redis://redis:6379/0'
 CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
 CELERY_TIMEZONE = 'America/Mexico_City'
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_BROKER_TRANSPORT_OPTIONS = {
+    'visibility_timeout': 3600,
+}
 
 
 # Password validation
@@ -157,3 +162,11 @@ STATICFILES_DIRS = [
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Email configuration - Brevo (Sendinblue) SMTP
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp-relay.brevo.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'acdea6001@smtp-brevo.com'     # tu login de Brevo
+EMAIL_HOST_PASSWORD = os.environ.get('SENDINBLUE_SMTP_KEY')  # SMTP key de Brevo, no tu contraseÃ±a
+DEFAULT_FROM_EMAIL = 'aalejandro0iq@gmail.com'
