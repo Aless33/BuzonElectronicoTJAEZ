@@ -45,7 +45,6 @@ class ValidarQRAPITestCase(TestCase):
 
     def test_validar_qr_requiere_autenticacion(self):
         """
-        TDD - Rojo:
         Se espera que un usuario anónimo no pueda validar un QR.
         """
         self.client.force_authenticate(user=None)
@@ -59,7 +58,6 @@ class ValidarQRAPITestCase(TestCase):
 
     def test_validar_qr_valido_retorna_autorizado(self):
         """
-        TDD - Rojo:
         Se espera que un QR existente, vigente y generado sea autorizado.
         """
         etiqueta = self.crear_etiqueta()
@@ -80,7 +78,6 @@ class ValidarQRAPITestCase(TestCase):
 
     def test_validar_qr_formato_invalido_retorna_404(self):
         """
-        TDD - Rojo:
         Se espera que un UUID con formato inválido sea rechazado.
         """
         response = self.client.get(
@@ -93,7 +90,6 @@ class ValidarQRAPITestCase(TestCase):
 
     def test_validar_qr_inexistente_retorna_404(self):
         """
-        TDD - Rojo:
         Se espera que un UUID válido pero inexistente sea rechazado.
         """
         response = self.client.get(
@@ -105,7 +101,6 @@ class ValidarQRAPITestCase(TestCase):
 
     def test_validar_qr_depositado_retorna_400(self):
         """
-        TDD - Rojo:
         Se espera que una etiqueta ya depositada no pueda validarse.
         """
         etiqueta = self.crear_etiqueta(
@@ -125,7 +120,6 @@ class ValidarQRAPITestCase(TestCase):
 
     def test_validar_qr_cancelado_retorna_400(self):
         """
-        TDD - Rojo:
         Se espera que una etiqueta cancelada no pueda validarse.
         """
         etiqueta = self.crear_etiqueta(
@@ -145,7 +139,6 @@ class ValidarQRAPITestCase(TestCase):
 
     def test_validar_qr_no_presentado_retorna_400(self):
         """
-        TDD - Rojo:
         Se espera que una etiqueta no presentada no pueda validarse.
         """
         etiqueta = self.crear_etiqueta(
@@ -165,7 +158,6 @@ class ValidarQRAPITestCase(TestCase):
 
     def test_validar_qr_caducado_retorna_400_y_actualiza_estado(self):
         """
-        TDD - Rojo:
         Se espera que una etiqueta caducada sea marcada como NO_PRESENTADO.
         """
         etiqueta = self.crear_etiqueta(
@@ -184,7 +176,6 @@ class ValidarQRAPITestCase(TestCase):
 
     def test_validar_qr_no_permite_post(self):
         """
-        TDD - Rojo:
         Se espera que validar QR no acepte POST.
         """
         etiqueta = self.crear_etiqueta()

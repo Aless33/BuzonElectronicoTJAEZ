@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
-
+from unittest.mock import patch
 from web.models import BuzonDemanda, Etiqueta, TipoPromocion
 
 
@@ -294,3 +294,31 @@ class ConfirmarDepositoAPITestCase(TestCase):
             response.status_code,
             status.HTTP_405_METHOD_NOT_ALLOWED,
         )
+
+    def test_confirmar_deposito_fallo_correo_no_invalida_deposito(self):
+        """
+        CU-05 (RNF-07): Si enviar_acuse_correo.delay() lanza una excepción,
+        el depósito igual debe quedar confirmado — el fallo del correo
+        no invalida la operación.
+        """
+        etiqueta = self.crear_etiqueta()
+        with patch(
+            'api.views.enviar_acuse_correo.delay',
+            side_effect=Exception('Redis no disponible'),
+        ):
+            response = self.client.post(
+                reverse(
+                    'confirmar_deposito',
+                    kwargs={'uuid_str': str(etiqueta.uuid)},
+                ),
+                data={'sensor_confirmado': True},
+                format='json',
+            )
+
+        etiqueta.refresh_from_db()
+
+        # El depósito debe haberse confirmado a pesar del fallo del correo
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['depositado'])
+        self.assertEqual(etiqueta.estado, Etiqueta.ESTADO_DEPOSITADO)
+        self.assertIsNotNone(etiqueta.fecha_deposito)

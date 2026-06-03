@@ -20,6 +20,69 @@ from web.tasks import enviar_acuse_correo
 logger = logging.getLogger(__name__)
 
 
+def _parsear_uuid(uuid_str, mensaje_error):
+    """
+    Intenta convertir uuid_str a UUID.
+    Retorna (uuid, None) si es válido, o (None, Response) si no lo es.
+    """
+    try:
+        return uuid_lib.UUID(uuid_str), None
+    except ValueError:
+        return None, Response(
+            {"error": mensaje_error},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+
+def _validar_sensor(sensor):
+    """
+    Valida el campo sensor_confirmado del payload.
+    Retorna None si es válido, o Response con el error correspondiente.
+    """
+    if sensor is None:
+        return Response(
+            {"error": "Falta el campo 'sensor_confirmado' en el payload."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if not sensor:
+        return Response(
+            {"error": "El sensor no confirmó el depósito."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    return None
+
+
+def _validar_etiqueta_para_deposito(etiqueta):
+    """
+    Valida que la etiqueta pueda recibir un depósito.
+    Retorna None si es válida, o Response con el error correspondiente.
+    """
+    if etiqueta.estado == Etiqueta.ESTADO_DEPOSITADO:
+        return Response(
+            {"error": "Esta etiqueta ya fue depositada anteriormente."},
+            status=status.HTTP_409_CONFLICT,
+        )
+
+    if etiqueta.estado != Etiqueta.ESTADO_ETIQUETA_GENERADA:
+        return Response(
+            {
+                "error": "La etiqueta no está en un estado válido.",
+                "estado_actual": etiqueta.estado,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not etiqueta.esta_vigente:
+        etiqueta.estado = Etiqueta.ESTADO_NO_PRESENTADO
+        etiqueta.save(update_fields=["estado"])
+        return Response(
+            {"error": "La etiqueta ha caducado."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    return None
+
+
 class ValidarQRView(APIView):
     """
     CU-03: Consultar Validez del QR.
@@ -33,20 +96,16 @@ class ValidarQRView(APIView):
 
     def get(self, request, uuid_str):
         """Valida el QR escaneado por el hardware."""
-        try:
-            uuid_limpio = uuid_lib.UUID(uuid_str)
-        except ValueError:
-            return Response(
-                {"error": "Formato de QR inválido."},
-                status=status.HTTP_404_NOT_FOUND
-            )
+        uuid_limpio, error = _parsear_uuid(uuid_str, "Formato de QR inválido.")
+        if error:
+            return error
 
         try:
             etiqueta = Etiqueta.objects.get(uuid=uuid_limpio)
         except Etiqueta.DoesNotExist:
             return Response(
                 {"error": "QR no encontrado."},
-                status=status.HTTP_404_NOT_FOUND
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         estados_rechazados = {
@@ -60,7 +119,7 @@ class ValidarQRView(APIView):
                     "error": "Etiqueta no disponible.",
                     "estado_actual": etiqueta.estado,
                 },
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         if not etiqueta.esta_vigente:
@@ -68,7 +127,7 @@ class ValidarQRView(APIView):
             etiqueta.save(update_fields=["estado"])
             return Response(
                 {"error": "La etiqueta ha caducado."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         return Response(
@@ -79,7 +138,7 @@ class ValidarQRView(APIView):
                 "numero_sobre": etiqueta.numero_sobre,
                 "estado": etiqueta.estado,
             },
-            status=status.HTTP_200_OK
+            status=status.HTTP_200_OK,
         )
 
 
@@ -95,58 +154,25 @@ class ConfirmarDepositoView(APIView):
 
     def post(self, request, uuid_str):
         """Confirma el depósito físico del sobre."""
-        try:
-            uuid_limpio = uuid_lib.UUID(uuid_str)
-        except ValueError:
-            return Response(
-                {"error": "Formato de UUID inválido."},
-                status=status.HTTP_404_NOT_FOUND
-            )
+        uuid_limpio, error = _parsear_uuid(uuid_str, "Formato de UUID inválido.")
+        if error:
+            return error
 
-        sensor = request.data.get("sensor_confirmado", None)
-
-        if sensor is None:
-            return Response(
-                {"error": "Falta el campo 'sensor_confirmado' en el payload."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if not sensor:
-            return Response(
-                {"error": "El sensor no confirmó el depósito."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        error = _validar_sensor(request.data.get("sensor_confirmado", None))
+        if error:
+            return error
 
         try:
             etiqueta = Etiqueta.objects.get(uuid=uuid_limpio)
         except Etiqueta.DoesNotExist:
             return Response(
                 {"error": "UUID no encontrado."},
-                status=status.HTTP_404_NOT_FOUND
+                status=status.HTTP_404_NOT_FOUND,
             )
 
-        if etiqueta.estado == Etiqueta.ESTADO_DEPOSITADO:
-            return Response(
-                {"error": "Esta etiqueta ya fue depositada anteriormente."},
-                status=status.HTTP_409_CONFLICT
-            )
-
-        if etiqueta.estado != Etiqueta.ESTADO_ETIQUETA_GENERADA:
-            return Response(
-                {
-                    "error": "La etiqueta no está en un estado válido.",
-                    "estado_actual": etiqueta.estado,
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if not etiqueta.esta_vigente:
-            etiqueta.estado = Etiqueta.ESTADO_NO_PRESENTADO
-            etiqueta.save(update_fields=["estado"])
-            return Response(
-                {"error": "La etiqueta ha caducado."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        error = _validar_etiqueta_para_deposito(etiqueta)
+        if error:
+            return error
 
         with transaction.atomic():
             etiqueta.estado = Etiqueta.ESTADO_DEPOSITADO
@@ -159,14 +185,14 @@ class ConfirmarDepositoView(APIView):
             enviar_acuse_correo.delay(etiqueta.pk)
             logger.info(
                 "[CU-05] Tarea de correo encolada para etiqueta pk=%s",
-                etiqueta.pk
+                etiqueta.pk,
             )
         except Exception as e:
             logger.error(
                 "[CU-05] Error al encolar correo para etiqueta pk=%s: %s",
                 etiqueta.pk,
                 e,
-                exc_info=True
+                exc_info=True,
             )
 
         return Response(
@@ -177,5 +203,5 @@ class ConfirmarDepositoView(APIView):
                 "fecha_deposito": etiqueta.fecha_deposito.isoformat(),
                 "numero_sobre": etiqueta.numero_sobre,
             },
-            status=status.HTTP_200_OK
+            status=status.HTTP_200_OK,
         )
