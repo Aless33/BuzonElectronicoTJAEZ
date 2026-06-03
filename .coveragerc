@@ -1,0 +1,16 @@
+[run]
+source = web
+omit =
+    */migrations/*
+    */pruebas_*/*
+    manage.py
+    web/tests.py
+    web/tests/*
+
+[report]
+show_missing = True
+precision = 2
+
+[html]
+directory = htmlcov
+title = Buzon Electronico TJAEZ — Coverage Report

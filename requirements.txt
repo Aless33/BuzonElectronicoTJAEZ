@@ -11,3 +11,5 @@ django-coverage-plugin>=1.1.1
 pytest>=7.4.0
 pytest-django>=4.8.0
 behave-django>=1.4.0
+selenium>=4.0
+pycodestyle
