@@ -22,4 +22,3 @@ urlpatterns = [
     path('buzon/', include('web.urls')),
     path('api/', include('api.urls')),
 ]
-

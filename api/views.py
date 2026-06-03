@@ -3,9 +3,8 @@ Vistas de la API REST para el Buzón Electrónico TJAEZ.
 Implementa CU-03 y CU-04 usando Django REST Framework.
 PEP8 compliant.
 """
-#import buzon_electronico_tjaez.celery
-from web.tasks import enviar_acuse_correo
-#import json
+
+import logging
 import uuid as uuid_lib
 
 from django.db import transaction
@@ -16,6 +15,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from web.models import Etiqueta
+from web.tasks import enviar_acuse_correo
+
+logger = logging.getLogger(__name__)
 
 
 class ValidarQRView(APIView):
@@ -155,8 +157,17 @@ class ConfirmarDepositoView(APIView):
         # El fallo del correo NO invalida el depósito
         try:
             enviar_acuse_correo.delay(etiqueta.pk)
-        except Exception:
-            pass
+            logger.info(
+                "[CU-05] Tarea de correo encolada para etiqueta pk=%s",
+                etiqueta.pk
+            )
+        except Exception as e:
+            logger.error(
+                "[CU-05] Error al encolar correo para etiqueta pk=%s: %s",
+                etiqueta.pk,
+                e,
+                exc_info=True
+            )
 
         return Response(
             {

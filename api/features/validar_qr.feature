@@ -5,23 +5,17 @@ Característica: Validación de QR en el Buzón Electrónico
   Quiero consultar la validez de un código QR escaneado
   Para autorizar o rechazar la apertura de la compuerta física
 
-  # ─── Escenarios: UUID mal formado ─────────────────────────────────────────
-
   Escenario: UUID con formato inválido retorna 404
     Dado que el hardware escanea el código "esto-no-es-un-uuid"
     Cuando consulta la validez del QR
     Entonces la API retorna el código de estado 404
-    Y la respuesta contiene el campo "error"
-
-  # ─── Escenarios: UUID inexistente ─────────────────────────────────────────
+    Y la respuesta contiene el mensaje de error "Formato de QR inválido."
 
   Escenario: UUID válido pero inexistente retorna 404
     Dado que el hardware escanea el código "00000000-0000-0000-0000-000000000000"
     Cuando consulta la validez del QR
     Entonces la API retorna el código de estado 404
     Y la respuesta contiene el mensaje de error "QR no encontrado."
-
-  # ─── Escenarios: Estados rechazados ───────────────────────────────────────
 
   Escenario: QR ya depositado retorna 400
     Dado que existe una etiqueta con estado "DEPOSITADO"
@@ -33,22 +27,20 @@ Característica: Validación de QR en el Buzón Electrónico
     Dado que existe una etiqueta con estado "CANCELADO"
     Cuando el hardware consulta la validez de esa etiqueta
     Entonces la API retorna el código de estado 400
+    Y la respuesta contiene el campo "estado_actual"
 
   Escenario: QR no presentado retorna 400
     Dado que existe una etiqueta con estado "NO_PRESENTADO"
     Cuando el hardware consulta la validez de esa etiqueta
     Entonces la API retorna el código de estado 400
-
-  # ─── Escenarios: Etiqueta caducada ────────────────────────────────────────
+    Y la respuesta contiene el campo "estado_actual"
 
   Escenario: QR caducado retorna 400 y cambia estado en base de datos
-    Dado que existe una etiqueta vigente que ha caducado
+    Dado que existe una etiqueta caducada
     Cuando el hardware consulta la validez de esa etiqueta
     Entonces la API retorna el código de estado 400
     Y la respuesta contiene el mensaje de error "La etiqueta ha caducado."
     Y el estado de la etiqueta en base de datos es "NO_PRESENTADO"
-
-  # ─── Escenarios: QR válido ────────────────────────────────────────────────
 
   Escenario: QR válido y vigente retorna 200 con autorización
     Dado que existe una etiqueta válida y vigente
@@ -68,3 +60,9 @@ Característica: Validación de QR en el Buzón Electrónico
     Dado que existe una etiqueta válida y vigente
     Cuando el hardware envía un POST a validar QR
     Entonces la API retorna el código de estado 405
+
+  Escenario: Usuario no autenticado no puede validar QR
+    Dado que existe una etiqueta válida y vigente
+    Y el hardware no está autenticado
+    Cuando el hardware consulta la validez de esa etiqueta
+    Entonces la API retorna el código de estado 401

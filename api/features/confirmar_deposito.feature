@@ -1,86 +1,74 @@
 # language: es
 
-Característica: Confirmación de depósito físico en el Buzón Electrónico
+Característica: Confirmación de depósito físico
   Como hardware del buzón electrónico
-  Quiero notificar al sistema que un sobre fue depositado físicamente
-  Para que el sistema registre el depósito y envíe el acuse al ciudadano
+  Quiero confirmar el depósito físico de una etiqueta
+  Para registrar que el sobre fue depositado correctamente
 
-  # ─── Escenarios: Formato de entrada ───────────────────────────────────────
+  Escenario: Confirmar depósito válido retorna 200
+    Dado que existe una etiqueta generada y vigente para depósito
+    Cuando el hardware confirma el depósito con sensor verdadero
+    Entonces la API retorna el código de estado 200
+    Y la respuesta contiene el campo "depositado"
+    Y el estado de la etiqueta en base de datos es "DEPOSITADO"
 
-  Escenario: UUID con formato inválido retorna 404
-    Dado que el sensor detecta el depósito del sobre con UUID "no-es-uuid"
-    Cuando el hardware confirma el depósito con sensor en true
+  Escenario: Confirmar depósito asigna fecha de depósito
+    Dado que existe una etiqueta generada y vigente para depósito
+    Cuando el hardware confirma el depósito con sensor verdadero
+    Entonces la API retorna el código de estado 200
+    Y la etiqueta tiene fecha de depósito registrada
+
+  Escenario: UUID inválido al confirmar depósito retorna 404
+    Dado que el hardware tiene el UUID de depósito "uuid-invalido"
+    Cuando el hardware confirma el depósito con sensor verdadero
     Entonces la API retorna el código de estado 404
+    Y la respuesta contiene el mensaje de error "Formato de UUID inválido."
 
-  Escenario: JSON inválido en el cuerpo retorna 400
-    Dado que existe una etiqueta válida y vigente para depósito
-    Cuando el hardware envía un cuerpo JSON inválido
-    Entonces la API retorna el código de estado 400
-
-  Escenario: Falta el campo sensor_confirmado retorna 400
-    Dado que existe una etiqueta válida y vigente para depósito
-    Cuando el hardware confirma el depósito sin el campo sensor
-    Entonces la API retorna el código de estado 400
-    Y la respuesta contiene "sensor_confirmado" en el mensaje de error
-
-  Escenario: Sensor en false retorna 400
-    Dado que existe una etiqueta válida y vigente para depósito
-    Cuando el hardware confirma el depósito con sensor en false
-    Entonces la API retorna el código de estado 400
-
-  Escenario: Método GET en confirmar depósito retorna 405
-    Dado que existe una etiqueta válida y vigente para depósito
-    Cuando el hardware envía un GET a confirmar depósito
-    Entonces la API retorna el código de estado 405
-
-  # ─── Escenarios: UUID inexistente ─────────────────────────────────────────
-
-  Escenario: UUID inexistente retorna 404
-    Dado que el sensor detecta el depósito del sobre con UUID "00000000-0000-0000-0000-000000000000"
-    Cuando el hardware confirma el depósito con sensor en true
+  Escenario: UUID inexistente al confirmar depósito retorna 404
+    Dado que el hardware tiene el UUID de depósito "00000000-0000-0000-0000-000000000000"
+    Cuando el hardware confirma el depósito con sensor verdadero
     Entonces la API retorna el código de estado 404
+    Y la respuesta contiene el mensaje de error "UUID no encontrado."
 
-  # ─── Escenarios: Depósito duplicado ───────────────────────────────────────
+  Escenario: Confirmar depósito sin campo sensor retorna 400
+    Dado que existe una etiqueta generada y vigente para depósito
+    Cuando el hardware confirma el depósito sin enviar sensor
+    Entonces la API retorna el código de estado 400
+    Y la respuesta contiene el mensaje de error "Falta el campo 'sensor_confirmado' en el payload."
 
-  Escenario: Depósito duplicado retorna 409
-    Dado que existe una etiqueta con estado "DEPOSITADO" para depósito
-    Cuando el hardware confirma el depósito con sensor en true para esa etiqueta
+  Escenario: Confirmar depósito con sensor falso retorna 400
+    Dado que existe una etiqueta generada y vigente para depósito
+    Cuando el hardware confirma el depósito con sensor falso
+    Entonces la API retorna el código de estado 400
+    Y la respuesta contiene el mensaje de error "El sensor no confirmó el depósito."
+    Y el estado de la etiqueta en base de datos es "ETIQUETA_GENERADA"
+
+  Escenario: Confirmar depósito duplicado retorna 409
+    Dado que existe una etiqueta ya depositada
+    Cuando el hardware confirma el depósito con sensor verdadero
     Entonces la API retorna el código de estado 409
+    Y la respuesta contiene el mensaje de error "Esta etiqueta ya fue depositada anteriormente."
 
-  # ─── Escenarios: Estados inválidos ────────────────────────────────────────
-
-  Escenario: Etiqueta cancelada retorna 400
-    Dado que existe una etiqueta con estado "CANCELADO" para depósito
-    Cuando el hardware confirma el depósito con sensor en true para esa etiqueta
+  Escenario: Confirmar depósito de etiqueta cancelada retorna 400
+    Dado que existe una etiqueta cancelada para depósito
+    Cuando el hardware confirma el depósito con sensor verdadero
     Entonces la API retorna el código de estado 400
     Y la respuesta contiene el campo "estado_actual"
 
-  Escenario: Etiqueta no presentada retorna 400
-    Dado que existe una etiqueta con estado "NO_PRESENTADO" para depósito
-    Cuando el hardware confirma el depósito con sensor en true para esa etiqueta
-    Entonces la API retorna el código de estado 400
-
-  # ─── Escenarios: Etiqueta caducada ────────────────────────────────────────
-
-  Escenario: Etiqueta caducada retorna 400 y cambia estado
+  Escenario: Confirmar depósito de etiqueta caducada retorna 400
     Dado que existe una etiqueta caducada para depósito
-    Cuando el hardware confirma el depósito con sensor en true para esa etiqueta
+    Cuando el hardware confirma el depósito con sensor verdadero
     Entonces la API retorna el código de estado 400
+    Y la respuesta contiene el mensaje de error "La etiqueta ha caducado."
     Y el estado de la etiqueta en base de datos es "NO_PRESENTADO"
 
-  # ─── Escenarios: Depósito exitoso ─────────────────────────────────────────
+  Escenario: Método GET en confirmar depósito retorna 405
+    Dado que existe una etiqueta generada y vigente para depósito
+    Cuando el hardware envía un GET a confirmar depósito
+    Entonces la API retorna el código de estado 405
 
-  Escenario: Depósito exitoso retorna 200 y cambia estado en base de datos
-    Dado que existe una etiqueta válida y vigente para depósito
-    Cuando el hardware confirma el depósito con sensor en true para esa etiqueta
-    Entonces la API retorna el código de estado 200
-    Y la respuesta contiene el campo "depositado"
-    Y la respuesta contiene el campo "uuid"
-    Y la respuesta contiene el campo "fecha_deposito"
-    Y la respuesta contiene el campo "digito_verificador"
-    Y el estado de la etiqueta en base de datos es "DEPOSITADO"
-
-  Escenario: Depósito exitoso registra timestamp en base de datos
-    Dado que existe una etiqueta válida y vigente para depósito
-    Cuando el hardware confirma el depósito con sensor en true para esa etiqueta
-    Entonces la fecha de depósito queda registrada en base de datos
+  Escenario: Usuario no autenticado no puede confirmar depósito
+    Dado que existe una etiqueta generada y vigente para depósito
+    Y el hardware de depósito no está autenticado
+    Cuando el hardware confirma el depósito con sensor verdadero
+    Entonces la API retorna el código de estado 401

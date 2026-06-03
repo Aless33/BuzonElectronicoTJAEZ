@@ -1,29 +1,46 @@
-"""
-Steps de Behave para CU-03: Validar QR.
-PEP8 compliant.
-"""
-import json
 from datetime import timedelta
-
-from behave import given, when, then
+from behave import given, when
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 from rest_framework.test import APIClient
+from web.models import BuzonDemanda
+from web.models import Etiqueta
+from web.models import TipoPromocion
+import os
+import django
+django.setup()
 
-from web.models import BuzonDemanda, Etiqueta
+os.environ.setdefault(
+    "DJANGO_SETTINGS_MODULE",
+    "buzon_electronico_tjaez.settings",
+)
 
 
-def _crear_etiqueta(estado=Etiqueta.ESTADO_ETIQUETA_GENERADA, vigente=True):
+def crear_cliente_autenticado():
+    usuario = User.objects.create_user(
+        username="hardware_test",
+        password="testpass123",
+    )
+    cliente = APIClient()
+    cliente.force_authenticate(user=usuario)
+    return cliente
+
+
+def crear_etiqueta(
+    estado=Etiqueta.ESTADO_ETIQUETA_GENERADA,
+    vigente=True,
+):
     buzon = BuzonDemanda.objects.create(
-        tipo_promocion='DEMANDA',
-        correo_electronico='test@test.com',
+        tipo_promocion=TipoPromocion.DEMANDA,
+        correo_electronico="test@test.com",
         numero_sobres=1,
     )
-    ct = ContentType.objects.get_for_model(buzon)
+    content_type = ContentType.objects.get_for_model(buzon)
     delta = timedelta(hours=1) if vigente else timedelta(hours=-1)
+
     return Etiqueta.objects.create(
-        content_type=ct,
+        content_type=content_type,
         object_id=buzon.pk,
         estado=estado,
         fecha_caducidad=timezone.now() + delta,
@@ -31,101 +48,67 @@ def _crear_etiqueta(estado=Etiqueta.ESTADO_ETIQUETA_GENERADA, vigente=True):
     )
 
 
-def _cliente_autenticado():
-    user = User.objects.create_user(
-        username='hardware_test',
-        password='testpass123'
-    )
-    client = APIClient()
-    client.force_authenticate(user=user)
-    return client
+def obtener_json(response):
+    try:
+        return response.json()
+    except ValueError:
+        return {}
 
-
-# ─── GIVEN ────────────────────────────────────────────────────────────────────
 
 @given('que el hardware escanea el código "{codigo}"')
 def step_escanea_codigo(context, codigo):
-    context.client = _cliente_autenticado()
+    context.client = crear_cliente_autenticado()
     context.uuid_str = codigo
     context.etiqueta = None
 
 
 @given('que existe una etiqueta con estado "{estado}"')
 def step_etiqueta_con_estado(context, estado):
-    context.client = _cliente_autenticado()
-    context.etiqueta = _crear_etiqueta(estado=estado)
+    context.client = crear_cliente_autenticado()
+    context.etiqueta = crear_etiqueta(estado=estado)
     context.uuid_str = str(context.etiqueta.uuid)
 
 
-@given('que existe una etiqueta vigente que ha caducado')
+@given("que existe una etiqueta caducada")
 def step_etiqueta_caducada(context):
-    context.client = _cliente_autenticado()
-    context.etiqueta = _crear_etiqueta(vigente=False)
+    context.client = crear_cliente_autenticado()
+    context.etiqueta = crear_etiqueta(vigente=False)
     context.uuid_str = str(context.etiqueta.uuid)
 
 
-@given('que existe una etiqueta válida y vigente')
+@given("que existe una etiqueta válida y vigente")
 def step_etiqueta_valida(context):
-    context.client = _cliente_autenticado()
-    context.etiqueta = _crear_etiqueta()
+    context.client = crear_cliente_autenticado()
+    context.etiqueta = crear_etiqueta()
     context.uuid_str = str(context.etiqueta.uuid)
 
 
-# ─── WHEN ─────────────────────────────────────────────────────────────────────
+@given("el hardware no está autenticado")
+def step_hardware_no_autenticado(context):
+    context.client.force_authenticate(user=None)
 
-@when('consulta la validez del QR')
+
+@when("consulta la validez del QR")
 def step_consulta_validez(context):
     context.response = context.client.get(
-        f'/api/validar-qr/{context.uuid_str}/'
+        f"/api/validar-qr/{context.uuid_str}/"
     )
-    context.response_json = context.response.json()
+    context.response_json = obtener_json(context.response)
 
 
-@when('el hardware consulta la validez de esa etiqueta')
+@when("el hardware consulta la validez de esa etiqueta")
 def step_consulta_etiqueta(context):
     context.response = context.client.get(
-        f'/api/validar-qr/{context.uuid_str}/'
+        f"/api/validar-qr/{context.uuid_str}/"
     )
-    context.response_json = context.response.json()
+    context.response_json = obtener_json(context.response)
 
 
-@when('el hardware envía un POST a validar QR')
+@when("el hardware envía un POST a validar QR")
 def step_post_validar_qr(context):
     context.response = context.client.post(
-        f'/api/validar-qr/{context.uuid_str}/'
+        f"/api/validar-qr/{context.uuid_str}/",
+        data={},
+        format="json",
     )
-    context.response_json = {}
-
-
-# ─── THEN ─────────────────────────────────────────────────────────────────────
-
-@then('la API retorna el código de estado {codigo:d}')
-def step_codigo_estado(context, codigo):
-    assert context.response.status_code == codigo, (
-        f"Se esperaba {codigo}, se obtuvo {context.response.status_code}. "
-        f"Respuesta: {context.response.content}"
-    )
-
-
-@then('la respuesta contiene el campo "{campo}"')
-def step_contiene_campo(context, campo):
-    assert campo in context.response_json, (
-        f"El campo '{campo}' no está en la respuesta: {context.response_json}"
-    )
-
-
-@then('la respuesta contiene el mensaje de error "{mensaje}"')
-def step_contiene_mensaje_error(context, mensaje):
-    assert context.response_json.get('error') == mensaje, (
-        f"Se esperaba error '{mensaje}', "
-        f"se obtuvo '{context.response_json.get('error')}'"
-    )
-
-
-@then('el estado de la etiqueta en base de datos es "{estado}"')
-def step_estado_en_bd(context, estado):
-    context.etiqueta.refresh_from_db()
-    assert context.etiqueta.estado == estado, (
-        f"Se esperaba estado '{estado}', "
-        f"se obtuvo '{context.etiqueta.estado}'"
-    )
+    context.response_json = obtener_json(context.response)

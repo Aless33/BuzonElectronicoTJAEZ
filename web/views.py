@@ -31,18 +31,19 @@ def buzon_crear(request):
 
             # 2. Armar dict para el servicio PDF
             datos = {
-                "tipo_promocion":    buzon.tipo_promocion,
+                "tipo_promocion": buzon.tipo_promocion,
                 "numero_expediente": getattr(buzon, 'numero_expediente', None),
-                "anio":              getattr(buzon, 'anio', None),
-                "ponencia":          getattr(buzon, 'ponencia', None),
-                "correo_ciudadano":  buzon.correo_electronico,
-                "numero_sobres":     buzon.numero_sobres,
+                "anio": getattr(buzon, 'anio', None),
+                "ponencia": getattr(buzon, 'ponencia', None),
+                "correo_ciudadano": buzon.correo_electronico,
+                "numero_sobres": buzon.numero_sobres,
             }
 
             try:
                 pdf_bytes, etiquetas_meta = generar_pdf_etiquetas(datos)
             except ValueError as e:
-                # Si falla la validación del servicio, borramos el buzón recién creado
+                # Si falla la validación del servicio, borramos el buzón recién
+                # creado
                 buzon.delete()
                 messages.error(request, str(e))
                 return render(request, 'Realizar_registro/buzon_form.html', {
@@ -54,8 +55,9 @@ def buzon_crear(request):
             # 3. Persistir etiquetas ligadas al buzón via GenericForeignKey
             ct = ContentType.objects.get_for_model(buzon)
             caducidad = timezone.make_aware(
-                timezone.datetime.combine(timezone.localdate(), time(23, 59, 59))
-            )
+                timezone.datetime.combine(
+                    timezone.localdate(), time(
+                        23, 59, 59)))
             for meta in etiquetas_meta:
                 Etiqueta.objects.create(
                     content_type=ct,
