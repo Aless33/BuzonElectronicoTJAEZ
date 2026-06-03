@@ -112,9 +112,13 @@ def step_validar_pdf(context):
 @then('el sistema debe mostrar el error "{mensaje}"')
 def step_validar_mensaje_error(context, mensaje):
     browser = obtener_browser(context)
+    time.sleep(1)
 
     def pagina_contiene_mensaje(navegador):
-        return mensaje in navegador.page_source
+        try:
+            return mensaje in navegador.page_source
+        except Exception:
+            return False
 
     WebDriverWait(browser, 10).until(pagina_contiene_mensaje)
 

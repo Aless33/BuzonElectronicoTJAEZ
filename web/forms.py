@@ -1,10 +1,9 @@
 from django import forms
-from django.utils import timezone
 
 from .models import (
     BuzonDemanda, BuzonContestacion, BuzonAlegatos, BuzonInformeAutoridad,
     BuzonRecurso, BuzonIncidente, BuzonAmparo, BuzonExpedienteRAG, BuzonOtros,
-    TipoPromocion, Ponencia, EstatusPromocion
+    TipoPromocion
 )
 
 

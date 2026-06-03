@@ -2,7 +2,6 @@ import random
 import string
 import uuid
 from datetime import datetime, time, timedelta
-
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
