@@ -5,7 +5,7 @@ Buzón Electrónico es un sistema web diseñado para el Tribunal de Justicia Adm
 
 ### Objetivo General
 
-Modernizar la recepción de documentos migrando a una arquitectura en Python (Django)[cite: 1]. El sistema gestiona una interfaz web para el pre-registro y expone una API RESTful para la validación y confirmación ciber-física con el hardware del buzón.
+Modernizar la recepción de documentos migrando a una arquitectura en Python (Django). El sistema gestiona una interfaz web para el pre-registro y expone una API RESTful para la validación y confirmación ciber-física con el hardware del buzón.
 
 ### Arquitectura del Sistema
 
