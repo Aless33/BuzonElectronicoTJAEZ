@@ -14,8 +14,15 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
+
 from web.models import Etiqueta
 from web.tasks import enviar_acuse_correo
+
+from .serializers import (
+    ConfirmarDepositoInputSerializer,
+    EtiquetaDepositoSerializer,
+    EtiquetaValidacionSerializer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,24 +39,6 @@ def _parsear_uuid(uuid_str, mensaje_error):
             {"error": mensaje_error},
             status=status.HTTP_404_NOT_FOUND,
         )
-
-
-def _validar_sensor(sensor):
-    """
-    Valida el campo sensor_confirmado del payload.
-    Retorna None si es válido, o Response con el error correspondiente.
-    """
-    if sensor is None:
-        return Response(
-            {"error": "Falta el campo 'sensor_confirmado' en el payload."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-    if not sensor:
-        return Response(
-            {"error": "El sensor no confirmó el depósito."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-    return None
 
 
 def _validar_etiqueta_para_deposito(etiqueta):
@@ -130,16 +119,8 @@ class ValidarQRView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        return Response(
-            {
-                "autorizado": True,
-                "uuid": str(etiqueta.uuid),
-                "digito_verificador": etiqueta.digito_verificador,
-                "numero_sobre": etiqueta.numero_sobre,
-                "estado": etiqueta.estado,
-            },
-            status=status.HTTP_200_OK,
-        )
+        serializer = EtiquetaValidacionSerializer(etiqueta)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class ConfirmarDepositoView(APIView):
@@ -158,9 +139,13 @@ class ConfirmarDepositoView(APIView):
         if error:
             return error
 
-        error = _validar_sensor(request.data.get("sensor_confirmado", None))
-        if error:
-            return error
+        input_serializer = ConfirmarDepositoInputSerializer(data=request.data)
+        if not input_serializer.is_valid():
+            primer_error = next(iter(input_serializer.errors.values()))[0]
+            return Response(
+                {"error": str(primer_error)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             etiqueta = Etiqueta.objects.get(uuid=uuid_limpio)
@@ -195,13 +180,5 @@ class ConfirmarDepositoView(APIView):
                 exc_info=True,
             )
 
-        return Response(
-            {
-                "depositado": True,
-                "uuid": str(etiqueta.uuid),
-                "digito_verificador": etiqueta.digito_verificador,
-                "fecha_deposito": etiqueta.fecha_deposito.isoformat(),
-                "numero_sobre": etiqueta.numero_sobre,
-            },
-            status=status.HTTP_200_OK,
-        )
+        serializer = EtiquetaDepositoSerializer(etiqueta)
+        return Response(serializer.data, status=status.HTTP_200_OK)
