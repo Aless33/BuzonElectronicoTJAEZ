@@ -35,7 +35,7 @@ class EtiquetaValidacionSerializer(serializers.ModelSerializer):
     """
     Respuesta de éxito para ValidarQRView (CU-03).
     """
-    autorizado = serializers.SerializerMethodField()
+    autorizado = serializers.BooleanField(default=True, read_only=True)
 
     class Meta:
         model = Etiqueta
@@ -47,15 +47,12 @@ class EtiquetaValidacionSerializer(serializers.ModelSerializer):
             'estado',
         ]
 
-    def get_autorizado(self, obj):
-        return True
-
 
 class EtiquetaDepositoSerializer(serializers.ModelSerializer):
     """
     Respuesta de éxito para ConfirmarDepositoView (CU-04).
     """
-    depositado = serializers.SerializerMethodField()
+    depositado = serializers.BooleanField(default=True, read_only=True)
 
     class Meta:
         model = Etiqueta
@@ -66,6 +63,3 @@ class EtiquetaDepositoSerializer(serializers.ModelSerializer):
             'fecha_deposito',
             'numero_sobre',
         ]
-
-    def get_depositado(self, obj):
-        return True

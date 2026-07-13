@@ -26,6 +26,10 @@ from .serializers import (
 
 logger = logging.getLogger(__name__)
 
+# Estados en los que una etiqueta puede ser validada/depositada.
+# Única fuente de verdad para CU-03 y CU-04 (lista blanca).
+ESTADOS_OPERABLES = {Etiqueta.ESTADO_ETIQUETA_GENERADA}
+
 
 def _parsear_uuid(uuid_str, mensaje_error):
     """
@@ -41,10 +45,28 @@ def _parsear_uuid(uuid_str, mensaje_error):
         )
 
 
-def _validar_etiqueta_para_deposito(etiqueta):
+def _verificar_vigencia(etiqueta):
     """
-    Valida que la etiqueta pueda recibir un depósito.
-    Retorna None si es válida, o Response con el error correspondiente.
+    Verifica que la etiqueta siga vigente. Si ya no lo está, la marca
+    como NO_PRESENTADO y persiste el cambio.
+    Retorna None si sigue vigente, o Response con el error correspondiente.
+    """
+    if etiqueta.esta_vigente:
+        return None
+
+    etiqueta.estado = Etiqueta.ESTADO_NO_PRESENTADO
+    etiqueta.save(update_fields=["estado"])
+    return Response(
+        {"error": "La etiqueta ha caducado."},
+        status=status.HTTP_400_BAD_REQUEST,
+    )
+
+
+def _validar_estado_operable(etiqueta):
+    """
+    Valida que la etiqueta esté en un estado operable (lista blanca,
+    compartida entre CU-03 y CU-04). Retorna None si es válida, o
+    Response con el error correspondiente.
     """
     if etiqueta.estado == Etiqueta.ESTADO_DEPOSITADO:
         return Response(
@@ -52,20 +74,12 @@ def _validar_etiqueta_para_deposito(etiqueta):
             status=status.HTTP_409_CONFLICT,
         )
 
-    if etiqueta.estado != Etiqueta.ESTADO_ETIQUETA_GENERADA:
+    if etiqueta.estado not in ESTADOS_OPERABLES:
         return Response(
             {
                 "error": "La etiqueta no está en un estado válido.",
                 "estado_actual": etiqueta.estado,
             },
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    if not etiqueta.esta_vigente:
-        etiqueta.estado = Etiqueta.ESTADO_NO_PRESENTADO
-        etiqueta.save(update_fields=["estado"])
-        return Response(
-            {"error": "La etiqueta ha caducado."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -77,7 +91,7 @@ class ValidarQRView(APIView):
     CU-03: Consultar Validez del QR.
     GET /api/validar-qr/<uuid>/
 
-    Valida que el QR exista, esté vigente y en estado ETIQUETA_GENERADA.
+    Valida que el QR exista, esté vigente y en estado operable.
     Retorna autorización para que el hardware abra la compuerta.
     """
     authentication_classes = [JWTAuthentication]
@@ -97,27 +111,19 @@ class ValidarQRView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        estados_rechazados = {
-            Etiqueta.ESTADO_DEPOSITADO,
-            Etiqueta.ESTADO_CANCELADO,
-            Etiqueta.ESTADO_NO_PRESENTADO,
-        }
-        if etiqueta.estado in estados_rechazados:
-            return Response(
-                {
-                    "error": "Etiqueta no disponible.",
-                    "estado_actual": etiqueta.estado,
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        error = _validar_estado_operable(etiqueta)
+        if error:
+            return error
 
-        if not etiqueta.esta_vigente:
-            etiqueta.estado = Etiqueta.ESTADO_NO_PRESENTADO
-            etiqueta.save(update_fields=["estado"])
-            return Response(
-                {"error": "La etiqueta ha caducado."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        error = _verificar_vigencia(etiqueta)
+        if error:
+            return error
+
+        logger.info(
+            "[CU-03] QR validado correctamente. uuid=%s pk=%s",
+            etiqueta.uuid,
+            etiqueta.pk,
+        )
 
         serializer = EtiquetaValidacionSerializer(etiqueta)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -135,11 +141,15 @@ class ConfirmarDepositoView(APIView):
 
     def post(self, request, uuid_str):
         """Confirma el depósito físico del sobre."""
-        uuid_limpio, error = _parsear_uuid(uuid_str, "Formato de UUID inválido.")
+        uuid_limpio, error = _parsear_uuid(
+            uuid_str, "Formato de UUID inválido."
+        )
         if error:
             return error
 
-        input_serializer = ConfirmarDepositoInputSerializer(data=request.data)
+        input_serializer = ConfirmarDepositoInputSerializer(
+            data=request.data
+        )
         if not input_serializer.is_valid():
             primer_error = next(iter(input_serializer.errors.values()))[0]
             return Response(
@@ -147,22 +157,35 @@ class ConfirmarDepositoView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        try:
-            etiqueta = Etiqueta.objects.get(uuid=uuid_limpio)
-        except Etiqueta.DoesNotExist:
-            return Response(
-                {"error": "UUID no encontrado."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        error = _validar_etiqueta_para_deposito(etiqueta)
-        if error:
-            return error
-
         with transaction.atomic():
+            try:
+                etiqueta = Etiqueta.objects.select_for_update().get(
+                    uuid=uuid_limpio
+                )
+            except Etiqueta.DoesNotExist:
+                return Response(
+                    {"error": "UUID no encontrado."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            error = _validar_estado_operable(etiqueta)
+            if error:
+                return error
+
+            error = _verificar_vigencia(etiqueta)
+            if error:
+                return error
+
             etiqueta.estado = Etiqueta.ESTADO_DEPOSITADO
             etiqueta.fecha_deposito = timezone.now()
             etiqueta.save(update_fields=["estado", "fecha_deposito"])
+
+        logger.info(
+            "[CU-04] Depósito confirmado. uuid=%s pk=%s fecha=%s",
+            etiqueta.uuid,
+            etiqueta.pk,
+            etiqueta.fecha_deposito,
+        )
 
         # CU-05: encolar tarea asíncrona (RNF-07)
         # El fallo del correo NO invalida el depósito
