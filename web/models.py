@@ -156,6 +156,12 @@ class BuzonAmparo(BuzonConExpedinteBase):
         verbose_name = 'Buzón - Amparo'
         verbose_name_plural = 'Buzones - Amparo'
 
+class BuzonExpedienteRAGInicial(BuzonBase):
+    """Solo campos base, igual que BuzonDemanda."""
+
+    class Meta:
+        verbose_name = 'Buzón - Expediente RAG Inicial'
+        verbose_name_plural = 'Buzones - Expediente RAG Inicial'
 
 class BuzonExpedienteRAG(BuzonConExpedinteBase):
     class Meta:

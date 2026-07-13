@@ -2,7 +2,7 @@ from django import forms
 
 from .models import (
     BuzonDemanda, BuzonContestacion, BuzonAlegatos, BuzonInformeAutoridad,
-    BuzonRecurso, BuzonIncidente, BuzonAmparo, BuzonExpedienteRAG, BuzonOtros,
+    BuzonRecurso, BuzonIncidente, BuzonAmparo,BuzonExpedienteRAGInicial, BuzonExpedienteRAG, BuzonOtros,
     TipoPromocion
 )
 
@@ -159,6 +159,14 @@ class BuzonAmparoForm(CorreoConfirmacionMixin, BaseWidgets, forms.ModelForm):
             **BaseWidgets.base_widgets,
             **BaseWidgets.expediente_widgets}
 
+class BuzonExpedienteRAGInicialForm(
+        CorreoConfirmacionMixin,
+        BaseWidgets,
+        forms.ModelForm):
+    class Meta:
+        model = BuzonExpedienteRAGInicial
+        fields = CAMPOS_BASE
+        widgets = BaseWidgets.base_widgets
 
 class BuzonExpedienteRAGForm(
         CorreoConfirmacionMixin,
@@ -195,7 +203,7 @@ FORM_MAP = {
     TipoPromocion.RECURSO: BuzonRecursoForm,
     TipoPromocion.INCIDENTE: BuzonIncidenteForm,
     TipoPromocion.AMPARO: BuzonAmparoForm,
-    TipoPromocion.EXPEDIENTE_RAG_INICIAL: BuzonDemandaForm,   # solo base
+    TipoPromocion.EXPEDIENTE_RAG_INICIAL: BuzonExpedienteRAGInicialForm,
     TipoPromocion.EXPEDIENTE_RAG: BuzonExpedienteRAGForm,
     TipoPromocion.OTROS: BuzonOtrosForm,
 }

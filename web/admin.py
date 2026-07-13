@@ -6,7 +6,8 @@ from django.utils.html import format_html
 
 from .models import (
     BuzonDemanda, BuzonContestacion, BuzonAlegatos, BuzonInformeAutoridad,
-    BuzonRecurso, BuzonIncidente, BuzonAmparo, BuzonExpedienteRAG, BuzonOtros,
+    BuzonRecurso, BuzonIncidente, BuzonAmparo, BuzonExpedienteRAG,
+    BuzonExpedienteRAGInicial, BuzonOtros,
     Etiqueta,
 )
 
@@ -70,7 +71,7 @@ class BuzonConExpedienteAdmin(BuzonBaseAdmin):
 
 
 # ---------------------------------------------------------------------------
-# Registro de los 9 modelos concretos
+# Registro de los 10 modelos concretos
 # ---------------------------------------------------------------------------
 @admin.register(BuzonDemanda)
 class BuzonDemandaAdmin(BuzonBaseAdmin):
@@ -112,6 +113,10 @@ class BuzonExpedienteRAGAdmin(BuzonConExpedienteAdmin):
     pass
 
 
+@admin.register(BuzonExpedienteRAGInicial)
+class BuzonExpedienteRAGInicialAdmin(BuzonBaseAdmin):
+    pass
+
 @admin.register(BuzonOtros)
 class BuzonOtrosAdmin(BuzonConExpedienteAdmin):
     list_display = BuzonConExpedienteAdmin.list_display + ('especifique',)
@@ -126,7 +131,8 @@ class TipoPromocionFilter(admin.SimpleListFilter):
 
     BUZON_MODELS = [
         BuzonDemanda, BuzonContestacion, BuzonAlegatos, BuzonInformeAutoridad,
-        BuzonRecurso, BuzonIncidente, BuzonAmparo, BuzonExpedienteRAG, BuzonOtros,
+        BuzonRecurso, BuzonIncidente, BuzonAmparo, BuzonExpedienteRAG,
+        BuzonExpedienteRAGInicial, BuzonOtros,
     ]
 
     def lookups(self, request, model_admin):
@@ -156,7 +162,6 @@ class EtiquetaAdmin(admin.ModelAdmin):
     list_select_related = ('content_type',)
 
     def get_queryset(self, request):
-        # Evita N+1 al resolver content_type en cada fila de la lista
         return super().get_queryset(request).select_related('content_type')
 
     def tipo_buzon(self, obj):
