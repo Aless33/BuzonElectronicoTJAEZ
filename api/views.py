@@ -6,7 +6,8 @@ PEP8 compliant.
 
 import logging
 import uuid as uuid_lib
-
+import datetime
+import io
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import status
@@ -14,9 +15,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
-
 from web.models import Etiqueta
 from web.tasks import enviar_acuse_correo
+from django.http import HttpResponse
+from django.utils import timezone
+from web.reportes import generar_workbook_depositos
+from rest_framework.permissions import IsAdminUser
 
 from .serializers import (
     ConfirmarDepositoInputSerializer,
@@ -205,3 +209,46 @@ class ConfirmarDepositoView(APIView):
 
         serializer = EtiquetaDepositoSerializer(etiqueta)
         return Response(serializer.data, status=status.HTTP_200_OK)
+class ReporteDepositosDiariosView(APIView):
+    """
+    Reporte de etiquetas depositadas en un día específico.
+    GET /api/reportes/depositos-diarios/?fecha=YYYY-MM-DD
+
+    Si no se envía 'fecha', se usa el día actual.
+    Devuelve un archivo .xlsx directamente.
+    """
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        fecha_str = request.query_params.get("fecha")
+
+        if fecha_str:
+            try:
+                fecha = datetime.date.fromisoformat(fecha_str)
+            except ValueError:
+                return Response(
+                    {"error": "Formato de fecha inválido. Usa YYYY-MM-DD."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        else:
+            fecha = timezone.localdate()
+
+        wb = generar_workbook_depositos(fecha)
+
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+
+        nombre_archivo = f"depositos_{fecha.isoformat()}.xlsx"
+        response = HttpResponse(
+            buffer.getvalue(),
+            content_type=(
+                "application/vnd.openxmlformats-officedocument"
+                ".spreadsheetml.sheet"
+            ),
+        )
+        response["Content-Disposition"] = (
+            f'attachment; filename="{nombre_archivo}"'
+        )
+        return response

@@ -16,4 +16,9 @@ urlpatterns = [
         views.ConfirmarDepositoView.as_view(),
         name='confirmar_deposito'
     ),
+    path(
+        "reportes/depositos-diarios/",
+        views.ReporteDepositosDiariosView.as_view(),
+        name="reporte-depositos-diarios",
+    ),
 ]
