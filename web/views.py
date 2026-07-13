@@ -1,11 +1,9 @@
-
 from django.shortcuts import render
 from django.http import HttpResponse
 from django.views.decorators.http import require_GET
 from django.contrib import messages
-from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
-from datetime import time
+
 '''
 Nueva version despues del merge
 '''
@@ -54,17 +52,13 @@ def buzon_crear(request):
 
             # 3. Persistir etiquetas ligadas al buzón via GenericForeignKey
             ct = ContentType.objects.get_for_model(buzon)
-            caducidad = timezone.make_aware(
-                timezone.datetime.combine(
-                    timezone.localdate(), time(
-                        23, 59, 59)))
             for meta in etiquetas_meta:
                 Etiqueta.objects.create(
                     content_type=ct,
                     object_id=buzon.pk,
                     uuid=meta["uuid"],
                     digito_verificador=meta["digito_verificador"],
-                    fecha_caducidad=caducidad,
+                    fecha_caducidad=meta["fecha_caducidad"],
                     numero_sobre=meta["numero_sobre"],
                 )
 
